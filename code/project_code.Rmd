@@ -1,0 +1,25 @@
+---
+title: "Final Project Code"
+author: "Samuel Leung"
+output: pdf_document
+date: "`r Sys.Date()`"
+editor_options: 
+  markdown: 
+    wrap: 72
+---
+
+```{r setup, include=FALSE, warning=FALSE, message=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r Scratch Work as i figure things out}
+# guide for linear optimization in R: https://lpsolve.sourceforge.net/5.5/R.htm
+
+# overall just an adaptation of simulated tempering
+
+# outcome of objective function is kernel
+
+# sample optimized kernel to get next index
+```
+
+
