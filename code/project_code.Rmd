@@ -12,6 +12,11 @@ editor_options:
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
+```{r Load Libraries}
+library("lpSolve")
+```
+
+
 ```{r Scratch Work as i figure things out}
 # guide for linear optimization in R: https://lpsolve.sourceforge.net/5.5/R.htm
 
@@ -23,7 +28,8 @@ knitr::opts_chunk$set(echo = TRUE)
 ```
 
 ```{r Project setup with rocket example}
-n <- 20
+# WE START EZ FIRST
+n <- 3
 realizations <- 0:n/n
 prior_probabilities <- realizations * (1-realizations)
 
@@ -31,7 +37,108 @@ posterior_calc <- function(realizations, prior, successes = 1) {
   joint <- realizations ** successes * prior
   return(joint / sum(joint))
 }
+
+posteriors <- posterior_calc(realizations, prior_probabilities)
+
+realizations
+prior_probabilities
+posteriors
 ```
+
+```{r lpsolve example}
+# Set up problem: maximize
+#   x1 + 9 x2 +   x3 subject to
+#   x1 + 2 x2 + 3 x3  <= 9
+# 3 x1 + 2 x2 + 2 x3 <= 15
+#
+f.obj <- c(1, 9, 1)
+f.con <- matrix (c(1, 2, 3, 3, 2, 2), nrow=2, byrow=TRUE)
+f.dir <- c("<=", "<=")
+f.rhs <- c(9, 15)
+
+sol = lp(direction = "max", 
+   objective.in = f.obj,
+   const.dir = f.dir,
+   const.mat = f.con,
+   const.rhs = f.rhs)
+str(sol)
+```
+
+```{r functions for making objective vector}
+absolute_dist <- function(from, to) return(abs(to - from))
+
+# take in indices and posteriors, calculate coefficients for objective function
+objective_matrix <- function(indices, posteriors, dist) {
+  ind <- length(indices)
+  temp <- matrix(NA, nrow = ind, ncol = ind)
+  for (col in 1:ind) {
+    for (row in 1:ind) {
+      temp[row, col] = dist(row, col)
+    }
+  }
+  return(temp*posteriors)
+}
+
+obj <- objective_matrix(indices = realizations, 
+                        posteriors = posteriors, 
+                        dist = absolute_dist)
+f.obj <- as.vector(t(obj))
+obj
+```
+```{r functions for making constraint matrix}
+constraint_matrix <- function(posteriors) {
+  n = length(posteriors)
+  return(matrix(rep(posteriors, n), nrow=n, byrow=TRUE))
+}
+f.con <- constraint_matrix(posteriors)
+f.con
+```
+```{r lpSolve first pass}
+# Set up problem: maximize
+#   x1 + 9 x2 +   x3 subject to
+#   x1 + 2 x2 + 3 x3  <= 9
+# 3 x1 + 2 x2 + 2 x3 <= 15
+
+# f.obj <- c(1, 9, 1)
+# f.con <- matrix (c(1, 2, 3, 3, 2, 2), nrow=2, byrow=TRUE)
+# f.dir <- c("<=", "<=")
+# f.rhs <- c(9, 15)
+# 
+# lp(direction = "max", objective.in = f.obj)
+
+lp_optimize <- function(direction = "max", int.vec = c(), posteriors, realizations, dist) {
+  # create inputs for lp function to intake
+  f.obj = as.vector(t(objective_matrix(indices = realizations,
+                                       posteriors = posteriors,
+                                       dist = dist)))
+  f.con = constraint_matrix(posteriors)
+  f.dir = rep("=", dim(f.con)[[1]])
+  f.rhs = posteriors
+  
+  return(lp(direction = direction, 
+            objective.in = f.obj, 
+            const.mat = f.con,
+            const.dir = f.dir,
+            const.rhs = f.rhs,
+            int.vec = int.vec))
+}
+
+n <- 4
+realizations <- 0:n/n
+prior_probabilities <- realizations * (1-realizations)
+posteriors <- posterior_calc(realizations, prior_probabilities, successes = 3)
+
+sol = lp_optimize(
+  posteriors = posteriors,
+  realizations = realizations, 
+  dist = absolute_dist)
+matrix(sol$solution, nrow=length(posteriors), byrow = TRUE)
+
+```
+
+
+
+
 
 
 
