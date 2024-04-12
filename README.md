@@ -13,9 +13,22 @@ ROUGH STEPS:
 2) Solve for kernel to sample from: $$\pi(i) = \sum_{j\in\text{indexes}}\pi(j)K(i|j)$$
 From above: we have $n$ equations with $n$ different $K(i|j)$'s.
 
-3) Pick which index to go, holding $X$ fixed, through the object function: $$f_{obj} = \sum_{j\in\text{indexes}}\pi(i)K(j|i)\cdot d(i, j)$$
-With $d(.)$ as a distance metric. Choose kernel that maximizes expected distance (HOW TO DO??)
+3) Pick which index to go, holding $X$ fixed, through sampling kernel that's selected from the objective function:
+  
+$$f_{obj} = \text{argmax}_j \mathbb{E}[d(i,j)]$$
+
+This is the same as:
+
+$$f_{obj} = \sum_i \pi_i \sum_j k_{ij}d(i,j)$$
+
+With $d(.)$ as a distance metric. Choose kernel that maximizes expected distance.
 
 4) Sample new index $i*$ from selected kernel above
 
 5) Repeat.
+
+
+Questions:
+
+- The $K$ matrix is the output of linear optimization. The input would be the $\pi_i$'s, and we keep the transition probabilities variable. For the matrix of transition probabilities, would each column be it's own transition probability in this case?
+  - ANSWER: doesn't matter that we have more equations than unknowns. Have many unique transition matrices, but we will get an optimal solution based on the objective function we're trying to maximize. 
