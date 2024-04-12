@@ -22,4 +22,16 @@ knitr::opts_chunk$set(echo = TRUE)
 # sample optimized kernel to get next index
 ```
 
+```{r Project setup with rocket example}
+n <- 20
+realizations <- 0:n/n
+prior_probabilities <- realizations * (1-realizations)
+
+posterior_calc <- function(realizations, prior, successes = 1) {
+  joint <- realizations ** successes * prior
+  return(joint / sum(joint))
+}
+```
+
+
 
