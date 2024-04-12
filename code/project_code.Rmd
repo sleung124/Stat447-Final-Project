@@ -30,7 +30,7 @@ prior_probabilities <- realizations * (1-realizations)
 posterior_calc <- function(realizations, prior, successes = 1) {
   joint <- realizations ** successes * prior
   return(joint / sum(joint))
-}
+} 
 ```
 
 

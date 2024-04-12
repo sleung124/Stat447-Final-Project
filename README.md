@@ -13,9 +13,15 @@ ROUGH STEPS:
 2) Solve for kernel to sample from: $$\pi(i) = \sum_{j\in\text{indexes}}\pi(j)K(i|j)$$
 From above: we have $n$ equations with $n$ different $K(i|j)$'s.
 
-3) Pick which index to go, holding $X$ fixed, through the object function: $$f_{obj} = \sum_{j\in\text{indexes}}\pi(i)K(j|i)\cdot d(i, j)$$
-With $d(.)$ as a distance metric. Choose kernel that maximizes expected distance (HOW TO DO??)
+3) Pick which index to go, holding $X$ fixed, through sampling kernel that's selected from the objective function: $$f_{obj} = \sum_{j\in\text{indexes}}\pi(i)K(j|i)\cdot d(i, j)$$
+With $d(.)$ as a distance metric. Choose kernel that maximizes expected distance.
 
 4) Sample new index $i*$ from selected kernel above
 
 5) Repeat.
+
+
+
+Some other notes:
+
+- from previous notes with Miguel: $K_{ij} = P(j|i) = (0, 0.5, 0.5, 0)$ (for example) 
