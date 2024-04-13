@@ -1,4 +1,5 @@
 library("lpSolve")
+library("extraDistr")
 
 # Generate objective matrix. Turning this matrix into a vector
 # is handled by the actual optimization function. This function 
@@ -45,4 +46,14 @@ lp_optimize <- function(direction = "max", int.vec = c(), posteriors, realizatio
             const.dir = f.dir,
             const.rhs = f.rhs,
             int.vec = int.vec))
+}
+
+# simulate next index
+next_index <- function(curr_index, posteriors, realizations, dist){
+  sol = lp_optimize(posteriors = posteriors, 
+                    realizations = realizations, 
+                    dist = dist)
+  sol.mat = matrix(sol$solution, nrow=length(posteriors), byrow = TRUE)
+  target_dist = sol.mat[curr_index+1,]
+  return(rcat(1, target_dist))
 }

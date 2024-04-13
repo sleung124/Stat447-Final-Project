@@ -17,8 +17,7 @@ source("lp_optimize.R")
 ```
 
 ```{r Project setup with rocket example}
-# WE START EZ FIRST
-n <- 3
+n <- 50
 realizations <- 0:n/n
 prior_probabilities <- realizations * (1-realizations)
 
@@ -35,14 +34,9 @@ posteriors <- posterior_calc(prior = prior_probabilities,
 absolute_dist <- function(from, to) return(abs(to - from))
 ```
 
-```{r one run of linOp}
-sol = lp_optimize(posteriors = posteriors, 
-            realizations = realizations, 
-            dist = absolute_dist)
-matrix(sol$solution, nrow=length(posteriors), byrow = TRUE)
+```{r one run of next_index}
+next_index(25, posteriors, realizations, absolute_dist)
 ```
 
-#### NEXT STEPS 
-- sample from chosen distribution
-- re-compute posteriors
-- go through linear optimization again
+
+
