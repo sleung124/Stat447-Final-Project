@@ -13,18 +13,7 @@ knitr::opts_chunk$set(echo = TRUE)
 ```
 
 ```{r Load Libraries}
-library("lpSolve")
-```
-
-
-```{r Scratch Work as i figure things out}
-# guide for linear optimization in R: https://lpsolve.sourceforge.net/5.5/R.htm
-
-# overall just an adaptation of simulated tempering
-
-# outcome of objective function is kernel
-
-# sample optimized kernel to get next index
+source("lp_optimize.R")
 ```
 
 ```{r Project setup with rocket example}
@@ -33,127 +22,27 @@ n <- 3
 realizations <- 0:n/n
 prior_probabilities <- realizations * (1-realizations)
 
-posterior_calc <- function(realizations, prior, successes = 1) {
-  joint <- realizations ** successes * prior
+posterior_calc <- function(prior, realizations, successes = 1, n_obs = 1) {
+  joint <- prior * dbinom(x = successes, size = n_obs, p = realizations)
   return(joint / sum(joint))
 }
 
-posteriors <- posterior_calc(realizations, prior_probabilities)
-
-realizations
-prior_probabilities
-posteriors
+posteriors <- posterior_calc(prior = prior_probabilities,
+                             realizations = realizations)
 ```
 
-```{r lpsolve example}
-# Set up problem: maximize
-#   x1 + 9 x2 +   x3 subject to
-#   x1 + 2 x2 + 3 x3  <= 9
-# 3 x1 + 2 x2 + 2 x3 <= 15
-#
-f.obj <- c(1, 9, 1)
-f.con <- matrix (c(1, 2, 3, 3, 2, 2), nrow=2, byrow=TRUE)
-f.dir <- c("<=", "<=")
-f.rhs <- c(9, 15)
-
-sol = lp(direction = "max", 
-   objective.in = f.obj,
-   const.dir = f.dir,
-   const.mat = f.con,
-   const.rhs = f.rhs)
-str(sol)
-```
-
-```{r functions for making objective vector}
+```{r distance functions}
 absolute_dist <- function(from, to) return(abs(to - from))
-
-# take in indices and posteriors, calculate coefficients for objective function
-objective_matrix <- function(indices, posteriors, dist) {
-  ind <- length(indices)
-  temp <- matrix(NA, nrow = ind, ncol = ind)
-  for (col in 1:ind) {
-    for (row in 1:ind) {
-      temp[row, col] = dist(row, col)
-    }
-  }
-  return(temp*posteriors)
-}
-
-obj <- objective_matrix(indices = realizations, 
-                        posteriors = posteriors, 
-                        dist = absolute_dist)
-f.obj <- as.vector(t(obj))
-obj
-```
-```{r functions for making constraint matrix}
-# future thing to maybe add
-# try also adding constraint that transition probabilities have to equal to one
-
-# constraint matrix is incorrect
-constraint_matrix <- function(posteriors) {
-  # number of parameters = n **2 
-  ind = length(posteriors)
-  con_mat = matrix(0, nrow = ind, ncol = ind ** 2)
-  ones_mat = matrix(0, nrow = ind, ncol = ind ** 2)
-  for (row in 1:ind) {
-    con_mat[row,1:ind + (row-1)*ind] = posteriors
-    ones_mat[row,1:ind + (row-1)*ind] = rep(1, ind)
-  }
-  return(rbind(con_mat, ones_mat))
-}
-f.con <- constraint_matrix(posteriors)
-dim(f.con)
-f.con
 ```
 
-```{r lpSolve first pass}
-# Set up problem: maximize
-#   x1 + 9 x2 +   x3 subject to
-#   x1 + 2 x2 + 3 x3  <= 9
-# 3 x1 + 2 x2 + 2 x3 <= 15
-
-# f.obj <- c(1, 9, 1)
-# f.con <- matrix (c(1, 2, 3, 3, 2, 2), nrow=2, byrow=TRUE)
-# f.dir <- c("<=", "<=")
-# f.rhs <- c(9, 15)
-# 
-# lp(direction = "max", objective.in = f.obj)
-
-lp_optimize <- function(direction = "max", int.vec = c(), posteriors, realizations, dist) {
-  # create inputs for lp function to intake
-  f.obj = as.vector(t(objective_matrix(indices = realizations,
-                                       posteriors = posteriors,
-                                       dist = dist)))
-  f.con = constraint_matrix(posteriors)
-  f.con.dim = dim(f.con)
-  f.dir = rep("=", f.con.dim[[1]])
-  f.rhs = c(posteriors, rep(1, f.con.dim[[1]] / 2))
-  # change f.rhs to be a vector of zeroes
-  # f.rhs = rep(0, dim(f.con)[[1]])
-  
-  return(lp(direction = direction, 
-            objective.in = f.obj, 
-            const.mat = f.con,
-            const.dir = f.dir,
-            const.rhs = f.rhs,
-            int.vec = int.vec))
-}
-
-n <- 7
-realizations <- 0:n/n
-prior_probabilities <- realizations * (1-realizations)
-posteriors <- posterior_calc(realizations, prior_probabilities, successes = 1)
-
-sol = lp_optimize(
-  posteriors = posteriors,
-  realizations = realizations, 
-  dist = absolute_dist)
+```{r one run of linOp}
+sol = lp_optimize(posteriors = posteriors, 
+            realizations = realizations, 
+            dist = absolute_dist)
 matrix(sol$solution, nrow=length(posteriors), byrow = TRUE)
 ```
 
-
-
-
-
-
-
+#### NEXT STEPS 
+- sample from chosen distribution
+- re-compute posteriors
+- go through linear optimization again
