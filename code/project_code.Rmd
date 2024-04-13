@@ -12,25 +12,30 @@ editor_options:
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-```{r Scratch Work as i figure things out}
-# guide for linear optimization in R: https://lpsolve.sourceforge.net/5.5/R.htm
-
-# overall just an adaptation of simulated tempering
-
-# outcome of objective function is kernel
-
-# sample optimized kernel to get next index
+```{r Load Libraries}
+source("lp_optimize.R")
 ```
 
 ```{r Project setup with rocket example}
-n <- 20
+n <- 50
 realizations <- 0:n/n
 prior_probabilities <- realizations * (1-realizations)
 
-posterior_calc <- function(realizations, prior, successes = 1) {
-  joint <- realizations ** successes * prior
+posterior_calc <- function(prior, realizations, successes = 1, n_obs = 1) {
+  joint <- prior * dbinom(x = successes, size = n_obs, p = realizations)
   return(joint / sum(joint))
-} 
+}
+
+posteriors <- posterior_calc(prior = prior_probabilities,
+                             realizations = realizations)
+```
+
+```{r distance functions}
+absolute_dist <- function(from, to) return(abs(to - from))
+```
+
+```{r one run of next_index}
+next_index(25, posteriors, realizations, absolute_dist)
 ```
 
 
