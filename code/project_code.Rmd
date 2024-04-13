@@ -86,13 +86,26 @@ f.obj <- as.vector(t(obj))
 obj
 ```
 ```{r functions for making constraint matrix}
+# future thing to maybe add
+# try also adding constraint that transition probabilities have to equal to one
+
+# constraint matrix is incorrect
 constraint_matrix <- function(posteriors) {
-  n = length(posteriors)
-  return(matrix(rep(posteriors, n), nrow=n, byrow=TRUE))
+  # number of parameters = n **2 
+  ind = length(posteriors)
+  con_mat = matrix(0, nrow = ind, ncol = ind ** 2)
+  ones_mat = matrix(0, nrow = ind, ncol = ind ** 2)
+  for (row in 1:ind) {
+    con_mat[row,1:ind + (row-1)*ind] = posteriors
+    ones_mat[row,1:ind + (row-1)*ind] = rep(1, ind)
+  }
+  return(rbind(con_mat, ones_mat))
 }
 f.con <- constraint_matrix(posteriors)
+dim(f.con)
 f.con
 ```
+
 ```{r lpSolve first pass}
 # Set up problem: maximize
 #   x1 + 9 x2 +   x3 subject to
@@ -112,8 +125,11 @@ lp_optimize <- function(direction = "max", int.vec = c(), posteriors, realizatio
                                        posteriors = posteriors,
                                        dist = dist)))
   f.con = constraint_matrix(posteriors)
-  f.dir = rep("=", dim(f.con)[[1]])
-  f.rhs = posteriors
+  f.con.dim = dim(f.con)
+  f.dir = rep("=", f.con.dim[[1]])
+  f.rhs = c(posteriors, rep(1, f.con.dim[[1]] / 2))
+  # change f.rhs to be a vector of zeroes
+  # f.rhs = rep(0, dim(f.con)[[1]])
   
   return(lp(direction = direction, 
             objective.in = f.obj, 
@@ -123,17 +139,16 @@ lp_optimize <- function(direction = "max", int.vec = c(), posteriors, realizatio
             int.vec = int.vec))
 }
 
-n <- 4
+n <- 7
 realizations <- 0:n/n
 prior_probabilities <- realizations * (1-realizations)
-posteriors <- posterior_calc(realizations, prior_probabilities, successes = 3)
+posteriors <- posterior_calc(realizations, prior_probabilities, successes = 1)
 
 sol = lp_optimize(
   posteriors = posteriors,
   realizations = realizations, 
   dist = absolute_dist)
 matrix(sol$solution, nrow=length(posteriors), byrow = TRUE)
-
 ```
 
 
