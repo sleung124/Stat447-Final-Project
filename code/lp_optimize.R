@@ -54,6 +54,6 @@ next_index <- function(curr_index, posteriors, realizations, dist){
                     realizations = realizations, 
                     dist = dist)
   sol.mat = matrix(sol$solution, nrow=length(posteriors), byrow = TRUE)
-  target_dist = sol.mat[curr_index+1,]
+  target_dist = sol.mat[curr_index,]
   return(rcat(1, target_dist))
 }
