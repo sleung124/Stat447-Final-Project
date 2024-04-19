@@ -62,10 +62,12 @@ rocket_sampling <- function(indices, n_successes, n_obs, dist, curr_index = 2 , 
     ret.indices[i] = next.index
     curr_index = next.index
     
+    # perfrom gibbs sampler under new curr_index
+    
     # update observations. Not sure if this is what i'm supposed to do. 
-    outcome = rbinom(1,1,realizations[curr_index])
-    n_obs = n_obs + 1
-    n_successes = n_successes + outcome
+    # outcome = rbinom(1,1,realizations[curr_index])
+    # n_obs = n_obs + 1
+    # n_successes = n_successes + outcome
     # ret.samples[i] = rbinom(1,1,)
   }
   return(ret.indices)
