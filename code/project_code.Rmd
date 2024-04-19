@@ -63,6 +63,9 @@ rocket_sampling <- function(indices, n_successes, n_obs, dist, curr_index = 2 , 
     curr_index = next.index
     
     # perfrom gibbs sampler under new curr_index
+    # what the heck is p(j|i) though??
+    
+    ...
     
     # update observations. Not sure if this is what i'm supposed to do. 
     # outcome = rbinom(1,1,realizations[curr_index])
