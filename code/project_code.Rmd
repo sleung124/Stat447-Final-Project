@@ -35,11 +35,17 @@ absolute_dist <- function(from, to) return(abs(to - from))
 ```
 
 ```{r one run of next_index}
+# next_index(2, posteriors, realizations, absolute_dist)
+sol = lp_optimize(posteriors = posteriors, realizations = realizations, dist = absolute_dist)
+get_solution_matrix(sol, length(posteriors))
+```
+
+```{r}
 next_index(2, posteriors, realizations, absolute_dist)
 ```
 
-```{r Putting it all together}
 
+```{r Putting it all together}
 # function to sample posterior + indexes for rocket example. Start index at 
 # 2, as index 1 is where the posterior = 0
 rocket_sampling <- function(indices, n_successes, n_obs, dist, curr_index = 2 , n_iter = 10) {
@@ -69,8 +75,13 @@ rocket_sampling(5, 1, 1, curr_index = 3, absolute_dist, n_iter = 10)
 ```
 
 ```{r debug time}
-sol = lp_optimize(posteriors=posteriors, realizations=realizations, dist=absolute_dist)
-matrix(sol$solution, nrow=length(posteriors), byrow=TRUE)
+# sol = lp_optimize(posteriors=posteriors, realizations=realizations, dist=absolute_dist)
+# matrix(sol$solution, nrow=length(posteriors), byrow=TRUE)
+f.obj <- c(1, 9, 1)
+f.con <- matrix (c(1, 2, 3, 3, 2, 2), nrow=2, byrow=TRUE)
+f.dir <- c("<=", "<=")
+f.rhs <- c(9, 15)
+sol=lp ("max", f.obj, f.con, f.dir, f.rhs)
 ```
 
 

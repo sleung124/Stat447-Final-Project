@@ -48,12 +48,16 @@ lp_optimize <- function(direction = "max", int.vec = c(), posteriors, realizatio
             int.vec = int.vec))
 }
 
+get_solution_matrix <- function(sol, length) matrix(sol$solution, nrow=length, byrow = TRUE)
+
 # simulate next index
 next_index <- function(curr_index, posteriors, realizations, dist){
   sol = lp_optimize(posteriors = posteriors, 
                     realizations = realizations, 
                     dist = dist)
-  sol.mat = matrix(sol$solution, nrow=length(posteriors), byrow = TRUE)
+  # sol.mat = matrix(sol$solution, nrow=length(posteriors), byrow = TRUE)
+  sol.mat = get_solution_matrix(sol, length(posteriors))
+  print(sol.mat[curr_index,])
   target_dist = sol.mat[curr_index,]
   return(rcat(1, target_dist))
 }

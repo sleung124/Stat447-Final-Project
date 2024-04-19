@@ -26,9 +26,3 @@ With $d(.)$ as a distance metric. Choose kernel that maximizes expected distance
 4) Sample new index $i*$ from selected kernel above
 
 5) Repeat.
-
-
-Questions:
-
-- The $K$ matrix is the output of linear optimization. The input would be the $\pi_i$'s, and we keep the transition probabilities variable. For the matrix of transition probabilities, would each column be it's own transition probability in this case?
-  - ANSWER: doesn't matter that we have more equations than unknowns. Have many unique transition matrices, but we will get an optimal solution based on the objective function we're trying to maximize. 
