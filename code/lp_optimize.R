@@ -5,8 +5,8 @@ library("extraDistr")
 # is handled by the actual optimization function. This function 
 # returns a matrix so that it's easier to see step-by-step what's
 # going on. 
-objective_matrix <- function(indices, posteriors, dist) {
-  ind <- length(indices)
+objective_matrix <- function(posteriors, dist) {
+  ind <- length(posteriors)
   temp <- matrix(NA, nrow = ind, ncol = ind)
   for (col in 1:ind) {
     for (row in 1:ind) {
@@ -30,11 +30,10 @@ constraint_matrix <- function(posteriors) {
 }
 
 # The actual linear optimization. Returns Kernel to potentially sample from. 
-lp_optimize <- function(direction = "max", int.vec = c(), posteriors, realizations, dist) {
+lp_optimize <- function(direction = "max", int.vec = c(), posteriors, dist) {
   # create inputs for lp function to intake
-  f.obj = as.vector(t(objective_matrix(indices = realizations,
-                                       posteriors = posteriors,
-                                       dist = dist)))
+  f.obj = as.vector(objective_matrix(posteriors = posteriors,
+                                     dist = dist))
   f.con = constraint_matrix(posteriors)
   f.con.dim = dim(f.con)
   f.dir = rep("=", f.con.dim[[1]])
@@ -51,9 +50,8 @@ lp_optimize <- function(direction = "max", int.vec = c(), posteriors, realizatio
 get_solution_matrix <- function(sol, length) matrix(sol$solution, nrow=length, byrow = TRUE)
 
 # simulate next index
-next_index <- function(curr_index, posteriors, realizations, dist){
+next_index <- function(curr_index, posteriors, dist){
   sol = lp_optimize(posteriors = posteriors, 
-                    realizations = realizations, 
                     dist = dist)
   # sol.mat = matrix(sol$solution, nrow=length(posteriors), byrow = TRUE)
   sol.mat = get_solution_matrix(sol, length(posteriors))
