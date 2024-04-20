@@ -14,10 +14,11 @@ knitr::opts_chunk$set(echo = TRUE)
 
 ```{r Load Libraries}
 source("lp_optimize.R")
+source("test.R")
 ```
 
 ```{r Project setup with rocket example}
-n <- 5
+n <- 20
 realizations <- 0:n/n
 prior_probabilities <- realizations * (1-realizations)
 
@@ -35,10 +36,10 @@ absolute_dist <- function(from, to) return(abs(to - from))
 ```
 
 
-```{r Putting it all together}
+```{r Rocket Example Sampling}
 # function to sample posterior + indexes for rocket example. Start index at 
 # 2, as index 1 is where the posterior = 0
-rocket_sampling <- function(indices, n_successes, n_obs, dist, curr_index = 2 , n_iter = 10) {
+rocket_sampling <- function(indices, n_successes, n_obs, dist, curr.index = 2 , n_iter = 3000) {
   ret.indices = rep(NA, n_iter)
   
   realizations = 0:indices / indices
@@ -46,20 +47,42 @@ rocket_sampling <- function(indices, n_successes, n_obs, dist, curr_index = 2 , 
   joint = prior.probabilities * 
     dbinom(x = n_successes, size = n_obs, p = realizations)
   posteriors = joint / sum(joint)
+  sol = lp_optimize(posteriors=posteriors, dist=dist)
+  sol.mat = get_solution_matrix(sol, length(posteriors))
+  if (!check_all(posteriors, sol.mat, absolute_dist)) {
+    stop("Solution does not pass all checks!!")
+  }
 
   for (i in 1:n_iter) {
-    next.index = next_index(curr_index = curr_index, 
-                            posteriors = posteriors, 
-                            dist = dist)
+    target.dist = sol.mat[curr.index,]
+    next.index = sample(1:length(target.dist), 1, prob = target.dist)
     ret.indices[i] = next.index
-    curr_index = next.index
+    curr.index = next.index
   }
   return(ret.indices)
 }
 
-rocket_samples = rocket_sampling(20, 3, 3, curr_index = 2, absolute_dist, n_iter = 10000)
-hist(rocket_samples, xlab = "indexes")
+rocket_samples = rocket_sampling(20, 3, 3, dist = absolute_dist)
+# hist(rocket_samples, xlab = "indexes")
+print("Rocket Sampling done!")
 ```
+```{r plot trace, fig.width = 10}
+plot_traces_and_hist = function(samples) {
+  layout_mat <- matrix(c(1, 2), nrow = 1, ncol = 2,
+                       byrow = TRUE)
+  layout(mat = layout_mat,
+         heights = c(1),
+         widths = c(3, 1), respect =TRUE)
+  par(mar = c(2,2,0,0))
+  plot(samples, axes = TRUE, type = "o", col = rgb(red = 0, green = 0, blue = 0, alpha = 0.2))
+  xhist <- hist(samples, plot = FALSE)
+  barplot(xhist$counts, axes = TRUE, space = 0, horiz=TRUE)
+}
+plot_traces_and_hist(rocket_samples)
+```
+
+
+EVERYTHING PAST HERE IS ROUGH WORK
 
 ```{r debug time}
 # check constraint matrix
@@ -85,6 +108,36 @@ print(posteriors - crossprod(posteriors, sol.mat) < epsilon)
 # check that tcrossprod(posteriors, sol.mat) has valid probs.
 print(sum(crossprod(posteriors, sol.mat)))
 ```
+```{r other checks}
+# check to see if solved solution is better than just generating the kernel 
+# from pi-stacking
+# ind = length(posteriors)
+# as.vector(matrix(rep(posteriors, ind), nrow=ind, byrow = TRUE))
+
+# maximizes objective function
+objective_function <- function(posteriors, transition.matrix, dist) {
+  ind = length(posteriors)
+  dist.mat = matrix(NA, nrow = ind, ncol = ind)
+  for (col in 1:ind) {
+    for (row in 1:ind) {
+      dist.mat[row, col] = dist(row, col)
+    }
+  }
+  return(sum(crossprod(posteriors, dist.mat * transition.matrix)))
+}
+
+ind = length(posteriors)
+pi.stack = matrix(rep(posteriors, ind), nrow=ind, byrow = TRUE)
+objective_function(posteriors, pi.stack, absolute_dist) < 
+  objective_function(posteriors, sol.mat, absolute_dist)
+```
+
+```{r}
+source("test.R")
+check_all(posteriors, pi.stack, absolute_dist)
+```
+
+
 
 
 

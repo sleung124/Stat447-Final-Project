@@ -23,7 +23,7 @@ proposal <- function(current_point, n_states) {
 
 # metropolis-hastings random walk on discrete space
 # n_states does not account for 0-indexing
-mh_random_walk <- function(gamma, initial_point, n_states, n_iters = 10000) {
+mh_random_walk <- function(gamma, n_states, initial_point = round(n/2), n_iters = 3000) {
   samples = numeric(n_iters)
   # dim = length(initial_point)
   current_point = initial_point
@@ -40,20 +40,10 @@ mh_random_walk <- function(gamma, initial_point, n_states, n_iters = 10000) {
   return(samples)
 }
 
-plot_traces_and_hist = function(samples) {
-  layout_mat <- matrix(c(1, 2), nrow = 1, ncol = 2,
-                       byrow = TRUE)
-  layout(mat = layout_mat,
-         heights = c(1),
-         widths = c(3, 1), respect =TRUE)
-  par(mar = c(2,2,0,0))
-  plot(samples, axes = TRUE, type = "o", col = rgb(red = 0, green = 0, blue = 0, alpha = 0.2))
-  xhist <- hist(samples, plot = FALSE)
-  barplot(xhist$counts, axes = TRUE, space = 0, horiz=TRUE)
+# function to call to sample
+mh_sampling <- function(initial_point, n_iters) {
+  return(mh_random_walk(gamma = gamma, 
+                        n_states = n,
+                        initial_point = initial_point,
+                        n_iters = n_iters))
 }
-
-samples = mh_random_walk(gamma = gamma, 
-                         initial_point = round(n/2),
-                         n_states = n)
-plot_traces_and_hist(samples)
-
