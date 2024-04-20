@@ -10,7 +10,7 @@ n_successes = 3
 # gamma
 gamma <- function(p) {
   if (p < 0 || p > 1) return(0)
-  p*(1-p)*dbinom(n_successes, n_trials, p)
+  p*(1-p)*dbinom(n_successes, n_trials, p) 
 }  
 
 

@@ -13,8 +13,10 @@ knitr::opts_chunk$set(echo = TRUE)
 ```
 
 ```{r Load Libraries}
+library("coda")
 source("lp_optimize.R")
 source("test.R")
+source("mh_random_walk.R")
 ```
 
 ```{r Project setup with rocket example}
@@ -33,6 +35,8 @@ posteriors <- posterior_calc(prior = prior_probabilities,
 
 ```{r distance functions}
 absolute_dist <- function(from, to) return(abs(to - from))
+squared_dist <- function(from, to) return((to-from)**2)
+cubed_dist <- function(from, to) return(abs((to-from)**3))
 ```
 
 
@@ -55,7 +59,7 @@ rocket_sampling <- function(indices, n_successes, n_obs, dist, curr.index = 2 , 
 
   for (i in 1:n_iter) {
     target.dist = sol.mat[curr.index,]
-    next.index = sample(1:length(target.dist), 1, prob = target.dist)
+    next.index = sample(1:length(target.dist), size=1, prob = target.dist)
     ret.indices[i] = next.index
     curr.index = next.index
   }
@@ -63,9 +67,18 @@ rocket_sampling <- function(indices, n_successes, n_obs, dist, curr.index = 2 , 
 }
 
 rocket_samples = rocket_sampling(20, 3, 3, dist = absolute_dist)
-# hist(rocket_samples, xlab = "indexes")
 print("Rocket Sampling done!")
 ```
+
+```{r Sampling for other techniques}
+n_iters = 3000
+random_walk_samples = mh_sampling(initial_point = 2, n_iters = n_iters)
+simple_samples = rep(NA, n_iters)
+for (i in 1:n_iters) simple_samples[i] = sample(0:n, size = 1, prob = posteriors)
+print("Done random walk and straight sampling!")
+```
+
+
 ```{r plot trace, fig.width = 10}
 plot_traces_and_hist = function(samples) {
   layout_mat <- matrix(c(1, 2), nrow = 1, ncol = 2,
@@ -74,12 +87,32 @@ plot_traces_and_hist = function(samples) {
          heights = c(1),
          widths = c(3, 1), respect =TRUE)
   par(mar = c(2,2,0,0))
-  plot(samples, axes = TRUE, type = "o", col = rgb(red = 0, green = 0, blue = 0, alpha = 0.2))
+  plot(samples, axes = TRUE, type = "o", 
+       col = rgb(red = 0, green = 0, blue = 0, alpha = 0.2))
   xhist <- hist(samples, plot = FALSE)
   barplot(xhist$counts, axes = TRUE, space = 0, horiz=TRUE)
 }
 plot_traces_and_hist(rocket_samples)
+plot_traces_and_hist(random_walk_samples)
+plot_traces_and_hist(simple_samples)
 ```
+
+```{r Rocket Sampling with squared distances}
+squared_rocket_samples = rocket_sampling(20, 3, 3, dist = squared_dist)
+plot_traces_and_hist(squared_rocket_samples)
+cubed_rocket_samples = rocket_sampling(20, 3, 3, dist = cubed_dist)
+plot_traces_and_hist(cubed_rocket_samples)
+```
+
+```{r ESS of samples}
+effectiveSize(rocket_samples)
+effectiveSize(squared_rocket_samples)
+effectiveSize(cubed_rocket_samples)
+effectiveSize(random_walk_samples)
+effectiveSize(simple_samples)
+```
+
+
 
 
 EVERYTHING PAST HERE IS ROUGH WORK
