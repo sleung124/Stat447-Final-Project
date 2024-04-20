@@ -30,20 +30,24 @@ posterior_calc <- function(prior, realizations, successes = 1, n_obs = 1) {
 }
 
 posteriors <- posterior_calc(prior = prior_probabilities,
-                             realizations = realizations)
+                             realizations = realizations, 
+                             successes = 3,
+                             n_obs = 3)
 ```
 
 ```{r distance functions}
 absolute_dist <- function(from, to) return(abs(to - from))
+sqr_dist <- function(from, to) return(sqrt(abs(to-from)))
 squared_dist <- function(from, to) return((to-from)**2)
 cubed_dist <- function(from, to) return(abs((to-from)**3))
+null_dist <- function(from, to) return(1)
 ```
 
 
 ```{r Rocket Example Sampling}
 # function to sample posterior + indexes for rocket example. Start index at 
 # 2, as index 1 is where the posterior = 0
-rocket_sampling <- function(indices, n_successes, n_obs, dist, curr.index = 2 , n_iter = 3000) {
+rocket_sampling <- function(indices, n_successes, n_obs, dist, curr.index = 2 , n_iter = 5000) {
   ret.indices = rep(NA, n_iter)
   
   realizations = 0:indices / indices
@@ -53,25 +57,28 @@ rocket_sampling <- function(indices, n_successes, n_obs, dist, curr.index = 2 , 
   posteriors = joint / sum(joint)
   sol = lp_optimize(posteriors=posteriors, dist=dist)
   sol.mat = get_solution_matrix(sol, length(posteriors))
-  if (!check_all(posteriors, sol.mat, absolute_dist)) {
+  if (!check_all(posteriors, sol.mat, dist)) {
     stop("Solution does not pass all checks!!")
   }
 
   for (i in 1:n_iter) {
     target.dist = sol.mat[curr.index,]
+    # print(target.dist)
     next.index = sample(1:length(target.dist), size=1, prob = target.dist)
     ret.indices[i] = next.index
     curr.index = next.index
   }
+  
   return(ret.indices)
 }
 
-rocket_samples = rocket_sampling(20, 3, 3, dist = absolute_dist)
-print("Rocket Sampling done!")
+rocket_sampling(20, 3, 3, curr.index = 10, dist = null_dist)
 ```
 
 ```{r Sampling for other techniques}
 n_iters = 3000
+rocket_samples = rocket_sampling(20, 3, 3, dist = absolute_dist, n_iter = n_iters)
+print("Rocket Sampling done!")
 random_walk_samples = mh_sampling(initial_point = 2, n_iters = n_iters)
 simple_samples = rep(NA, n_iters)
 for (i in 1:n_iters) simple_samples[i] = sample(0:n, size = 1, prob = posteriors)
@@ -79,7 +86,7 @@ print("Done random walk and straight sampling!")
 ```
 
 
-```{r plot trace, fig.width = 10}
+```{r plot trace, fig.width = 10, fig.height = 4}
 plot_traces_and_hist = function(samples) {
   layout_mat <- matrix(c(1, 2), nrow = 1, ncol = 2,
                        byrow = TRUE)
@@ -96,12 +103,15 @@ plot_traces_and_hist(rocket_samples)
 plot_traces_and_hist(random_walk_samples)
 plot_traces_and_hist(simple_samples)
 ```
-
-```{r Rocket Sampling with squared distances}
+```{r Rocket Sampling with squared distances, fig.width = 10, fig.height = 4}
 squared_rocket_samples = rocket_sampling(20, 3, 3, dist = squared_dist)
 plot_traces_and_hist(squared_rocket_samples)
 cubed_rocket_samples = rocket_sampling(20, 3, 3, dist = cubed_dist)
 plot_traces_and_hist(cubed_rocket_samples)
+null_rocket_samples = rocket_sampling(20, 3, 3, curr.index = 5, dist = null_dist)
+plot_traces_and_hist(null_rocket_samples)
+sqr_rocket_samples = rocket_sampling(20, 3, 3, curr.index = 2, dist = sqr_dist)
+plot_traces_and_hist(sqr_rocket_samples)
 ```
 
 ```{r ESS of samples}
@@ -111,6 +121,27 @@ effectiveSize(cubed_rocket_samples)
 effectiveSize(random_walk_samples)
 effectiveSize(simple_samples)
 ```
+
+```{r Finding average Mixing times}
+mixing_time <- function(x, initial) {
+  ind = which(x == initial)
+  if (length(ind) == 0) {return(-1)}
+  return(ind[[1]])
+}
+
+iters = 1000
+mix.temp = rep(0, iters)
+div = 0
+for (i in 1:iters) {
+  local.temp = rocket_sampling(20, 3, 3, curr.index = 10, dist = absolute_dist)
+  time = mixing_time(x = local.temp, initial = 10)
+  if (time != -1) {mix.temp[i] = time; div = div + 1}
+}
+
+sum(mix.temp) / div
+var(mix.temp)
+```
+
 
 
 
