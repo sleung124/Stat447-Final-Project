@@ -17,7 +17,7 @@ source("lp_optimize.R")
 ```
 
 ```{r Project setup with rocket example}
-n <- 3
+n <- 5
 realizations <- 0:n/n
 prior_probabilities <- realizations * (1-realizations)
 
@@ -47,29 +47,18 @@ rocket_sampling <- function(indices, n_successes, n_obs, dist, curr_index = 2 , 
     dbinom(x = n_successes, size = n_obs, p = realizations)
   posteriors = joint / sum(joint)
 
-  
   for (i in 1:n_iter) {
     next.index = next_index(curr_index = curr_index, 
                             posteriors = posteriors, 
                             dist = dist)
     ret.indices[i] = next.index
     curr_index = next.index
-    
-    # perfrom gibbs sampler under new curr_index
-    # what the heck is p(j|i) though??
-    
-    
-    
-    # update observations. Not sure if this is what i'm supposed to do. 
-    # outcome = rbinom(1,1,realizations[curr_index])
-    # n_obs = n_obs + 1
-    # n_successes = n_successes + outcome
-    # ret.samples[i] = rbinom(1,1,)
   }
   return(ret.indices)
 }
 
-rocket_sampling(5, 1, 1, curr_index = 3, absolute_dist, n_iter = 10)
+rocket_samples = rocket_sampling(20, 3, 3, curr_index = 2, absolute_dist, n_iter = 10000)
+hist(rocket_samples, xlab = "indexes")
 ```
 
 ```{r debug time}
@@ -91,10 +80,10 @@ sol.mat = get_solution_matrix(sol, length(posteriors))
 # exact inequality kind of whack due to underflow; so we check
 # for the values to be within an error bound
 epsilon = 1e-10
-print(posteriors - tcrossprod(posteriors, sol.mat) < epsilon)
+print(posteriors - crossprod(posteriors, sol.mat) < epsilon)
 
 # check that tcrossprod(posteriors, sol.mat) has valid probs.
-print(sum(tcrossprod(posteriors, sol.mat)))
+print(sum(crossprod(posteriors, sol.mat)))
 ```
 
 
