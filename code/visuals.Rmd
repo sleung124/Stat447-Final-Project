@@ -1,0 +1,240 @@
+---
+title: "Final Project Visualization Code"
+author: "Samuel Leung"
+output: pdf_document
+date: "`r Sys.Date()`"
+editor_options: 
+  markdown: 
+    wrap: 72
+---
+
+```{r setup, include=FALSE, warning=FALSE, message=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r Load Libraries}
+library(ggplot2)
+library(cowplot)
+source("lp_optimize.R")
+source("test.R")
+source("mh_random_walk.R")
+```
+
+#### RMarkdown File to generate visuals
+
+- Workspace to generate plots for report
+- No analysis of any kind done in this file
+- Catered only towards the rockets example found in class
+
+```{r Project setup with rocket example}
+n <- 20
+realizations <- 0:n/n
+prior_probabilities <- realizations * (1-realizations)
+
+posterior_calc <- function(prior, realizations, successes = 1, n_obs = 1) {
+  joint <- prior * dbinom(x = successes, size = n_obs, p = realizations)
+  return(joint / sum(joint))
+}
+
+posteriors <- posterior_calc(prior = prior_probabilities,
+                             realizations = realizations, 
+                             successes = 3,
+                             n_obs = 3)
+```
+
+```{r distance functions}
+absolute_dist <- function(from, to) return(abs(to - from))
+squared_dist <- function(from, to) return((to-from)**2)
+cubed_dist <- function(from, to) return(abs((to-from)**3))
+```
+
+
+```{r Rocket Example Sampling}
+# function to sample posterior + indexes for rocket example. Start index at 
+# 2, as index 1 is where the posterior = 0
+rocket_sampling <- function(indices, n_successes, n_obs, dist, curr.index = 2 , n_iter = 5000) {
+  ret.indices = rep(NA, n_iter)
+  
+  realizations = 0:indices / indices
+  prior.probabilities = realizations * (1-realizations)
+  joint = prior.probabilities * 
+    dbinom(x = n_successes, size = n_obs, p = realizations)
+  posteriors = joint / sum(joint)
+  sol = lp_optimize(posteriors=posteriors, dist=dist)
+  sol.mat = get_solution_matrix(sol, length(posteriors))
+  if (!check_all(posteriors, sol.mat, dist)) {
+    stop("Solution does not pass all checks!!")
+  }
+
+  for (i in 1:n_iter) {
+    target.dist = sol.mat[curr.index,]
+    # print(target.dist)
+    next.index = sample(1:length(target.dist), size=1, prob = target.dist)
+    ret.indices[i] = next.index
+    curr.index = next.index
+  }
+  
+  return(ret.indices)
+}
+```
+
+```{r Sampling for other techniques}
+n_iters = 3000
+initial_point = n / 2
+rocket_samples = rocket_sampling(20, 3, 3, curr.index = initial_point, dist = absolute_dist, n_iter = n_iters)
+print("Rocket Sampling done!")
+random_walk_samples = mh_sampling(initial_point = initial_point, n_iters = n_iters)
+simple_samples = rep(NA, n_iters)
+for (i in 1:n_iters) simple_samples[i] = sample(0:n, size = 1, prob = posteriors)
+print("Done random walk and straight sampling!")
+```
+
+
+```{r plot trace, fig.width = 10, fig.height = 4}
+plot_traces_and_hist = function(samples) {
+  layout_mat <- matrix(c(1, 2), nrow = 1, ncol = 2,
+                       byrow = TRUE)
+  layout(mat = layout_mat,
+         heights = c(1),
+         widths = c(3, 1), respect =TRUE)
+  par(mar = c(2,2,0,0))
+  plot(samples, axes = TRUE, type = "o", 
+       col = rgb(red = 0, green = 0, blue = 0, alpha = 0.2))
+  xhist <- hist(samples, plot = FALSE)
+  barplot(xhist$counts, axes = TRUE, space = 0, horiz=TRUE)
+}
+plot_traces_and_hist(rocket_samples)
+plot_traces_and_hist(random_walk_samples)
+plot_traces_and_hist(simple_samples)
+```
+```{r Rocket Sampling with squared distances, fig.width = 10, fig.height = 4}
+squared_rocket_samples = rocket_sampling(20, 3, 3, dist = squared_dist, n_iter = n_iters)
+plot_traces_and_hist(squared_rocket_samples)
+cubed_rocket_samples = rocket_sampling(20, 3, 3, dist = cubed_dist, n_iter = n_iters)
+plot_traces_and_hist(cubed_rocket_samples)
+```
+
+```{r Finding average Mixing times}
+mixing_time <- function(x, initial) {
+  ind = which(x == initial)
+  if (length(ind) == 0) {return(-1)}
+  return(ind[[1]])
+}
+
+ave_mixing_time <- function(curr.index, dist, iters = 100) {
+  mix.temp = rep(0, iters)
+  div = 0
+  for (i in 1:iters) {
+    local.temp = rocket_sampling(20, 3, 3, curr.index = curr.index, dist = dist)
+    time = mixing_time(x = local.temp, initial = curr.index)
+    if (time != -1) {mix.temp[i] = time; div = div + 1}
+  }
+  return(c(sum(mix.temp), div))
+}
+
+abdist.mixing.times = rep(0, n+1)
+abdist.mixing.denom = rep(0, n+1)
+
+sqdist.mixing.times = rep(0, n+1)
+sqdist.mixing.denom = rep(0, n+1)
+
+cudist.mixing.times = rep(0, n+1)
+cudist.mixing.denom = rep(0, n+1)
+
+for (i in 2:n) {
+  temp = ave_mixing_time(curr.index = i, dist = absolute_dist)
+  a.temp = ave_mixing_time(curr.index = i, dist = squared_dist)
+  b.temp = ave_mixing_time(curr.index = i, dist = cubed_dist)
+  abdist.mixing.times[i] = temp[[1]]
+  sqdist.mixing.times[i] = a.temp[[1]]
+  cudist.mixing.times[i] = b.temp[[1]]
+  abdist.mixing.denom[i] = temp[[2]]
+  sqdist.mixing.denom[i] = a.temp[[2]]
+  cudist.mixing.denom[i] = b.temp[[2]]
+}
+
+print("done!")
+```
+```{r Plot Mixing Times, fig.height=8, fig.width=12}
+# ggplot(data.frame(x = 2:n, y = 100 - mixing.denom[2:n], p = 100 * posteriors[2:n])) +
+#   geom_histogram(aes(x=x, y=y), stat = "identity")
+
+plot_mixing_times <- function(mixing.times, title = "") {
+  a = ggplot(data.frame(x = 0:n, y = mixing.times/ 100, p = posteriors)) +
+    geom_histogram(aes(x=x, y=y, fill = p), stat = "identity") +
+    scale_fill_gradient(low = "blue", high="red", name = "Posterior Probabilities") +
+    labs(x="Indices", y="Average Recurrence Times", title = title) 
+  return(a)
+}
+
+plot_missed <- function(mixing.denom, title = "") {
+  b = ggplot(data.frame(x = 1:(n-1), y = 100 - mixing.denom[1:(n-1)], p = posteriors[1:(n-1)])) +
+  geom_histogram(aes(x=x, y=y, fill = p), stat = "identity") +
+  scale_fill_gradient(low = "blue", high="red", name = "Posterior Probabilities") +
+  labs(x="Indices", y="Iterations", title = title)
+}
+
+abdist.mixing.times.plot = plot_mixing_times(abdist.mixing.times, title = "Average Recurrence Times per Index - Absolute Distance")
+sqdist.mixing.times.plot = plot_mixing_times(sqdist.mixing.times, title = "Average Recurrence Times per Index - Squared Distance")
+cudist.mixing.times.plot = plot_mixing_times(cudist.mixing.times, title = "Average Recurrence Times per Index - Cubed Distance")
+
+plot_grid(abdist.mixing.times.plot, 
+          sqdist.mixing.times.plot,
+          cudist.mixing.times.plot,
+          nrow = 3)
+
+abdist.missed.inital.plot = plot_missed(abdist.mixing.denom, title = "Count of Initial Index Misses - Absolute Distance")
+sqdist.missed.inital.plot = plot_missed(sqdist.mixing.denom, title = "Count of Initial Index Misses - Squared Distance")
+cudist.missed.inital.plot = plot_missed(cudist.mixing.denom, title = "Count of Initial Index Misses - Cubed Distance")
+
+plot_grid(abdist.missed.inital.plot, 
+          sqdist.missed.inital.plot,
+          cudist.missed.inital.plot,
+          nrow = 3)
+```
+
+```{r Recurrence plots for random walk, fig.height=4, fig.width=12}
+# random walk mixing time function
+rw.ave_mixing_time <- function(curr.index, dist, iters = 100) {
+  mix.temp = rep(0, iters)
+  div = 0
+  for (i in 1:iters) {
+    local.temp = mh_sampling(initial_point = curr.index, n_iters = 3000)
+    time = mixing_time(x = local.temp, initial = curr.index)
+    if (time != -1) {mix.temp[i] = time; div = div + 1}
+  }
+  return(c(sum(mix.temp), div))
+}
+
+rw.mixing.times = rep(0, n+1)
+rw.mixing.denom = rep(0, n+1)
+
+# we don't go all the way to n, as with the random walk we run into trouble
+# with gamma(1) returning 0 -> ratio = Inf
+for (i in 2:(n-1)) {
+  # print(paste0("On index: ", i))
+  rw.temp = rw.ave_mixing_time(curr.index = i)
+  rw.mixing.times[i] = rw.temp[[1]]
+  rw.mixing.denom[i] = rw.temp[[2]]
+}
+
+rw.mixing.times.plot = plot_mixing_times(rw.mixing.times, title = "Average Recurrence Times per Index - Random Walk")
+rw.missed.initial.plot = plot_missed(rw.mixing.denom, title = "Count of Initial Index Misses - Random Walk")
+
+plot_grid(rw.mixing.times.plot, rw.missed.initial.plot, nrow = 2)
+
+df = rbind(data.frame(x = 0:n, y = abdist.mixing.times / 100, 
+                      z = 100 - abdist.mixing.denom, method = "Absolute Distance"),
+           # data.frame(x = 0:n, y = sqdist.mixing.times / 100, method = "Squared Distance"),
+           # data.frame(x = 0:n, y = cudist.mixing.times / 100, method = "Cubed Distance"),
+           data.frame(x = 0:n, y = rw.mixing.times / 100, 
+                      z = 100 - rw.mixing.denom,method = "Random Walk"))
+a = ggplot(df, aes(x=x, y=y, fill=method)) +
+  geom_histogram(stat = "identity", colour = "black", position="dodge", show.legend = FALSE) + 
+  labs(x="Indices", y="Average Recurrence Times") 
+b = ggplot(df[df$z!=100,], aes(x=x, y=z, fill = method)) + 
+  geom_histogram(stat="identity", colour = "black", position="dodge") + 
+  labs(x="Indices", y="Count of Initial Index Misses")
+plot_grid(a, b, ncol=2)
+
+```
